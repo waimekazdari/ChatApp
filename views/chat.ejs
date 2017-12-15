@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/stylesheets/chatStyle.css">
+    <title>Chat App</title>
+  </head>
+  <body>
+
+
+    <div class="menu">
+                <div class="back"><i class="fa fa-chevron-left"></i> <img src="https://i.imgur.com/DY6gND0.png" draggable="false"/></div>
+                <div id="name" class="name"></div>
+                <div class="last">18:09</div>
+            </div>
+        <ol class="chat">
+
+        <li class="other">
+            <div class="avatar"><img src="https://i.imgur.com/DY6gND0.png" draggable="false"/></div>
+          <div class="msg">
+            <p>Qué contexto de Góngora? <emoji class="suffocated"/></p>
+            <time>20:18</time>
+          </div>
+        </li>
+        <li class="self">
+            <div class="avatar"><img src="https://i.imgur.com/HYcn9xO.png" draggable="false"/></div>
+          <div class="msg">
+            <p id="msg"></p>
+            <time>20:18</time>
+          </div>
+        </li>
+        </ol>
+        <form action="">
+        <input id ="messages" class="textarea" type="text" placeholder="Type here!"/><div class="emojis"></div>
+        </form>
+        <script src="/javascripts/jquery.min.js"></script>
+        <script src="/javascripts/socketIoScript.js"></script>
+        <script >
+        var socket=io();
+        socket.on('name', function(user) {
+          $('#name').append($('<label>').text(user));
+        });
+
+        $('form').submit(function(){
+          socket.emit('chat message',{'msg':$('#messages').val()});
+         $('#messages').val('');
+          return false;
+        });
+        socket.on('chat message', function(msg) {
+          $('#msg').append($('<li>').text(msg));
+        });
+        </script>
+  </body>
+</html>
