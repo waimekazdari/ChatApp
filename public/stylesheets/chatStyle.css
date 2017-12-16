@@ -2,7 +2,7 @@
 @import url(https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css);
 
 html, body {
-    background: #e5e5e5;
+    background: none;
     font-family: 'Lato', sans-serif;
     margin: 0px auto;
 }
@@ -13,6 +13,8 @@ html, body {
 a{
   color: rgba(82,179,217,0.9);
 }
+
+
 
 /* M E N U */
 .corp {
@@ -89,7 +91,7 @@ a{
 
 .chat {
     list-style: none;
-    background: none;
+    background: #e5e5e5;
     margin: 0;
     padding: 0 0 50px 0;
     margin-top: 60px;
@@ -195,7 +197,7 @@ a{
     box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.07);
 }
 .msg p {
-    font-size: 0.8rem;
+    font-size: 1.3rem;
     margin: 0 0 0.2rem 0;
     color: #777;
 }
