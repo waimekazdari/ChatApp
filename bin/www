@@ -7,6 +7,8 @@
 var app = require('../app');
 var debug = require('debug')('appchat:server');
 var http = require('http');
+var mongo = require('mongodb').MongoClient;
+//var client = require('socket.io').listen(4000).sockets;
 
 /**
  * Get port from environment and store in Express.
@@ -93,46 +95,154 @@ connections = [];
 users = [];
 var username;
 // socket io
-
+//:27017/mongochat
 var io = require('socket.io')(server);
-io.on('connection',function(socket){
-  connections.push(socket);
-  console.log("user is connected");
-  console.log('Connected : %s sockets connected',connections.length);
-  socket.on('disconnect',function(data){
+var url ="mongodb://localhost";
+mongo.connect(url, function(err, client){
+  if(err){
+    throw err;
+  }
+  console.log('mongodb connected');
 
-    connections.splice(connections.indexOf(socket), 1);
-    console.log("user  diconnected");
-    console.log('disconnected : %s sockets connected',connections.length);
-    users.splice(users.indexOf(socket),1);
-    updateUsernames();
-    if(!username){
-      return;
+  //connect to socket.io
+
+  io.on('connection',function(socket){
+    var db = client.db('mongochat');
+    var chat = db.collection('chats');
+    var clients = db.collection('users');
+    //create function to send status
+    sendStatus = function(s){
+      io.emit('status',s);
     }
 
 
-  });
-  /*socket.on('name',function (msguser){
-    console.log(msguser.msg);
-    console.log(msguser.user);
-    io.emit('chat message',msguser.user+" : "+msguser .msg);
-  });*/
- socket.on('chat message',function(msg){
-   console.log(msg.msg);
-   io.emit('chat message',{'msg':msg.msg,'username':msg.username});
- });
+
+    //handle input Event
+
+/*    socket.on('input', function(data) {
+      let name = data.name;
+      let message = data.message;
+      //check for name and messages
+      if(name =='' || message == ''){
+        sendStatus('Please enter message');
+      }else{
+          chat.insert({name: name, message: message}, function() {
+            io.emit('output', [data]);
+
+            //send status object
+            sendStatus({
+              message: 'Message sent',
+              clear: true
+            });
+          });
+      }
+    });*/
+
+    //handle clear
+    socket.on('clear', function(data){
+      // remove all chats from collection
+      chat.remove({},function() {
+        io.emit('cleared');
+      });
+    });
 
 
-  socket.on('new user',function (data,callback) {
-     callback(true);
-      username = data;
-      users.push(username);
-      console.log(username);
+    connections.push(socket);
+    console.log("user is connected");
+    console.log('Connected : %s sockets connected',connections.length);
+    socket.emit('connect',"connected");
+    socket.on('disconnect',function(data){
+
+      connections.splice(connections.indexOf(socket), 1);
+      console.log("user  diconnected");
+      console.log('disconnected : %s sockets connected',connections.length);
+      users.splice(users.indexOf(socket),1);
       updateUsernames();
-  });
+      if(!username){
+        return;
+      }
 
-  function updateUsernames(){
-    io.emit('get users',users);
-  }
+
+    });
+    socket.on('name',function (data){
+      console.log(data.user);
+      username=data.user;
+      users.push(data.user);
+      updateUsernames();
+      //io.emit('chat message',msguser.user+" : "+msguser .msg);
+    });
+
+
+   socket.on('chat message',function(msg){
+     console.log(msg.msg);
+     var name = msg.username;
+     var message = msg.msg;
+     chat.insert({name: msg.username, message: msg.msg}, function() {
+       console.log('server on chat :'+name);
+     io.emit('chat message',{'msg':msg.msg,'username':msg.username});
+     sendStatus({
+       message: 'Message sent',
+       clear: true
+     });
+   });
+   });
+
+
+   socket.on('signup',function(data,callback) {
+     clients.findOne({username:data.username},function(err,result) {
+       if(err){
+         throw err;
+       }else if (result==null){
+
+         username = data.username;
+         users.push(data.username);
+         updateUsernames();
+         clients.insert({username:data.username, password:data.password},function(){
+           chat.find().limit(100).sort({_id:1}).toArray(function(err, res){
+             if(err){
+               throw err;
+             }
+             //emit the messages
+             socket.emit('output',res);
+           });
+         });
+         callback(true);
+       }else {
+         callback(false);
+        //  socket.emit('signup',result);
+       }
+     });
+   });
+
+   socket.on('new user',function (data,callback) {
+       clients.findOne({username:data.username,password:data.password},function(err,result) {
+         if(err){
+           throw err;
+         }else if (result!==null){
+        callback(true);
+        username = data.username;
+        users.push(data.username);
+        updateUsernames();
+        console.log('ana f server '+data.username);
+
+        //Get chat from mongo collection
+        chat.find().limit(100).sort({_id:1}).toArray(function(err, res){
+          if(err){
+            throw err;
+          }
+          //emit the messages
+          socket.emit('output',res);
+          //callback(true);
+        });
+      }else{
+        callback(false);
+      }
+    });
+});
+    function updateUsernames(){
+      io.emit('get users',users);
+    }
+
+  });
 
 });
